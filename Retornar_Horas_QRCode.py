@@ -227,8 +227,7 @@ signature_path = os.path.join(os.environ['APPDATA'], r"Microsoft\Signatures\Lean
 with open(signature_path, 'r', encoding='UTF-16 LE') as file:
     signature = file.read()
 signature = signature.replace('\n', '<br>')
-email.To = "rribeiro@ecourbis.com.br"
-email.CC = "lmsantos@ecourbis.com.br"
+email.To = ""#
 email.Subject = f"QR-Codes contêineres - {today}"
 image_path = r"C:\Users\lmsantos\AppData\Roaming\Microsoft\Signatures\Leandro (lmsantos@ecourbis.com.br)_arquivos\image001.png"
 if not os.path.exists(image_path):
