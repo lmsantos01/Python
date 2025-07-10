@@ -1,0 +1,27 @@
+import os
+ 
+arquivo_origem = 'meuarquivo.csv'
+tamanho_maximo = 9 * 1024 * 1024  # 9 MB
+ 
+with open(arquivo_origem, 'r', encoding='latin1') as f:
+    print("Arquivo aberto com encoding latin1")
+    cabecalho = f.readline()
+    parte = 1
+    tamanho_atual = 0
+    linhas = []
+    for linha in f:
+        tamanho_atual += len(linha.encode('latin1'))
+        linhas.append(linha)
+        if tamanho_atual >= tamanho_maximo:
+            with open(f'parte_{parte}.csv', 'w', encoding='latin1') as saida:
+                saida.write(cabecalho)
+                saida.writelines(linhas)
+            print(f'Salvo: parte_{parte}.csv')
+            parte += 1
+            linhas = []
+            tamanho_atual = 0
+    if linhas:
+        with open(f'parte_{parte}.csv', 'w', encoding='latin1') as saida:
+            saida.write(cabecalho)
+            saida.writelines(linhas)
+        print(f'Salvo: parte_{parte}.csv')
