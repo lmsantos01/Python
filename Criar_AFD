@@ -1,0 +1,80 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+import os
+from datetime import datetime
+
+agora = datetime.now()
+
+data_formatada = agora.strftime("%Y-%m-%D")
+hora_formatada = agora.strftime("%H:%M:%S")
+edge_options = webdriver.EdgeOptions()
+edge_options.add_argument("--start-maximized")
+edge_options.add_argument("--ignore-certificate-errors")# <- Ignora o aviso SSL
+edge_options.add_argument("--allow-insecure-localhost")# <- Permite IPs locais inseguros
+driver = webdriver.Edge(options=edge_options)
+driver.get("https://10.77.12.78/")
+wait = WebDriverWait(driver, 10)
+sistema = wait.until(EC.presence_of_element_located((By.ID, "input_user")))
+sistema.send_keys("admin")
+ambiente = wait.until(EC.presence_of_element_located((By.ID, "input_password")))
+ambiente.send_keys("admin")
+sistema.send_keys(Keys.RETURN)
+wait = WebDriverWait(driver, 10)
+menu_lateral = wait.until(EC.presence_of_element_located((By.ID, "MasterPage_menu")))
+afd_link = wait.until(EC.element_to_be_clickable((
+    By.XPATH,
+    '//*[@id="MasterPage_menu"]//a[contains(normalize-space(.), "AFD")]'
+)))
+afd_link.click()
+por_data_inicial = wait.until(EC.element_to_be_clickable((
+    By.XPATH,
+    '//a[contains(normalize-space(.), "Por Data inicial")]'
+)))
+por_data_inicial.click()
+time.sleep(2)
+campo_data = wait.until(EC.presence_of_element_located((By.ID, "initial_date")))
+driver.execute_script("arguments[0].value = '02/06/2025';", campo_data)
+campo_data.send_keys("02/06/2025")
+time.sleep(2)
+botao_baixar = wait.until(EC.element_to_be_clickable((
+    By.XPATH,
+    '//button[contains(normalize-space(.), "Baixar AFD")]'
+)))
+botao_baixar.click()
+
+time.sleep(10)
+driver.quit()
+
+
+caminho_arquivo = os.path.expanduser(r"~\Downloads\AFD0001400888000485707037123000812REP_C.txt")
+os.startfile(caminho_arquivo)
+
+
+texto_inicial = (
+    f"000000000110703712300081200000000000000Ecourbis Ambiental SA                                                                                                                                 000140088800048572025-03-112025-06-04{data_formatada}T{hora_formatada}-0300003108238299000129iDClass Facial Prox           9daa"
+)
+with open(caminho_arquivo, 'r', encoding='utf-8') as file:
+    conteudo_original = file.read()
+novo_conteudo = texto_inicial + '\n' + conteudo_original
+with open(caminho_arquivo, 'w', encoding='utf-8') as file:
+    file.write(novo_conteudo)
+
+print("Texto inserido com sucesso na primeira linha.")
+
+with open(caminho_arquivo, 'r', encoding='utf-8') as file:
+    linhas = file.readlines()
+if not linhas[-1].endswith('\n'):
+    linhas[-1] += '\n'
+contador = sum(1 for linha in linhas if len(linha) > 9 and linha[9] == '3')
+contador_formatado = str(contador).zfill(9)
+texto_final = f"999999999000000000{contador_formatado}0000000000000000000000000000000000009"
+linhas.append(texto_final + '\n')
+Ncaminho_arquivo = r"G:\P57.txt"
+with open(Ncaminho_arquivo, 'w', encoding='utf-8') as file:
+    file.writelines(linhas)
+
+print(f"Total de linhas com '3' na coluna 10: {contador}")
