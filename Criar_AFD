@@ -16,7 +16,7 @@ edge_options.add_argument("--start-maximized")
 edge_options.add_argument("--ignore-certificate-errors")# <- Ignora o aviso SSL
 edge_options.add_argument("--allow-insecure-localhost")# <- Permite IPs locais inseguros
 driver = webdriver.Edge(options=edge_options)
-driver.get("https://10.77.12.78/")
+driver.get("https://xx.xx.xx.xx/")
 wait = WebDriverWait(driver, 10)
 sistema = wait.until(EC.presence_of_element_located((By.ID, "input_user")))
 sistema.send_keys("admin")
@@ -55,7 +55,7 @@ os.startfile(caminho_arquivo)
 
 
 texto_inicial = (
-    f"000000000110703712300081200000000000000Ecourbis Ambiental SA                                                                                                                                 000140088800048572025-03-112025-06-04{data_formatada}T{hora_formatada}-0300003108238299000129iDClass Facial Prox           9daa"
+    f"00000000011xxxxxxxxxxxxxxx00000000000000nomeempresa                                                                                                                                 000140088800048572025-03-112025-06-04{data_formatada}T{hora_formatada}-0300003108238299000129iDClass Facial Prox           9daa"
 )
 with open(caminho_arquivo, 'r', encoding='utf-8') as file:
     conteudo_original = file.read()
