@@ -1,0 +1,115 @@
+import pandas as pd
+import os
+import pyodbc
+import win32com.client
+
+caminho_access = r'I:\GEOPROCESSAMENTO\GEO\COLETA_DOMICILIAR\Gerar_CSV\DN_DS\Criar_csv_Leandro_Dom _DN_DS_2.accdb'
+access_app = win32com.client.Dispatch("Access.Application")
+access_app.OpenCurrentDatabase(caminho_access)
+access_app.DoCmd.RunMacro("GERARCSV")
+access_app.CloseCurrentDatabase()
+access_app.Quit()
+conn_str = (
+    r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
+    rf'DBQ={caminho_access};'
+)
+conn = pyodbc.connect(conn_str)
+cursor = conn.cursor()
+
+df = pd.read_sql("SELECT * FROM CSV", conn)
+
+# Formatar coordenadas
+def formatar_coordenadas(valor):
+    if pd.isna(valor):
+        return valor
+    valor_str = str(valor)
+    partes = valor_str.split('.')
+    if len(partes) > 1:
+        inteiro = partes[0]
+        decimal = ''.join(partes[1:])
+        return f"{inteiro},{decimal}"
+    return valor_str
+df['SEGMENT_ID'] = df['SEGMENT_ID'].apply(formatar_coordenadas)
+df['POINT_X'] = df['POINT_X'].apply(formatar_coordenadas)
+df['POINT_Y'] = df['POINT_Y'].apply(formatar_coordenadas)
+
+# Ordenação
+df = df.sort_values(by=['SETOR', 'SEQ'])
+pasta_saida = r'I:\GEOPROCESSAMENTO\GEO\COLETA_DOMICILIAR\Gerar_CSV\DN_DS\Separador\Subs'
+os.makedirs(pasta_saida, exist_ok=True)
+
+coluna_base = df.columns[2] #Coluna 'SETOR'
+dias_map = {
+    'segunda': 'Seg',
+    'terca': 'Ter',
+    'quarta': 'Qua',
+    'quinta': 'Qui',
+    'sexta': 'Sex',
+    'sabado': 'Sab',
+}
+for valor in df[coluna_base].dropna().unique():
+    df_filtrado = df[df[coluna_base] == valor].copy()
+    df_filtrado.reset_index(drop=True, inplace=True)  # <- ESSENCIAL
+    sigil = str(valor).strip()
+
+    # DATA_VIGENCIA
+    query_dtoficio = f"SELECT TOP 1 DT_OFICIO FROM DOMICILIAR WHERE SIGIL = '{sigil}'"
+    cursor.execute(query_dtoficio)
+    resultado = cursor.fetchone()
+    if resultado:
+        data_oficio = resultado[0]
+        if isinstance(data_oficio, str):
+            data_oficio = data_oficio.strip()
+        elif hasattr(data_oficio, 'strftime'):
+            data_oficio = data_oficio.strftime('%d/%m/%Y')
+        else:
+            data_oficio = str(data_oficio)
+
+        df_filtrado['DATA_VIGENCIA'] = data_oficio
+
+    # Nº_OFICIO
+    query_oficio = f"SELECT TOP 1 OFICIO_APR FROM DOMICILIAR WHERE SIGIL = '{sigil}'"
+    cursor.execute(query_oficio)
+    resultado = cursor.fetchone()
+    if resultado:
+        oficio = resultado[0]
+        if isinstance(oficio, str):
+            oficio = oficio.strip()
+        elif hasattr(oficio, 'strftime'):
+            oficio = oficio.strftime('%d/%m/%Y')
+        else:
+            oficio = str(oficio)
+
+        df_filtrado['Nº_OFICIO'] = oficio
+
+    # Frequência
+    query_freq = f"SELECT TOP 1 FREQUENCIA FROM DOMICILIAR WHERE SIGIL = '{sigil}'"
+    cursor.execute(query_freq)
+    resultado = cursor.fetchone()
+    if resultado:
+        valor_freq = resultado[0].strip().lower()
+        if valor_freq == 'diario':
+            freq = 'SegTerQuaQuiSexSab'
+        else:
+            partes = valor_freq.split('/')
+            freq = ''.join([dias_map.get(parte.strip(), parte.strip()).capitalize() for parte in partes])
+    else:
+        freq = "FreqNaoEncontrada"
+
+    # Turno
+    query_turno = f"SELECT TOP 1 TURNO FROM DOMICILIAR WHERE SIGIL = '{sigil}'"
+    cursor.execute(query_turno)
+    resultado_turno = cursor.fetchone()
+    if resultado_turno and resultado_turno[0].strip().upper() == "NOTURNO":
+        turno = 'N'
+    else:
+        turno = 'D'
+
+    nome_base = f"{sigil}_{freq}_{turno}_Dom"
+    nome_arquivo = f"{nome_base}.csv"
+    subpasta = os.path.join(pasta_saida, nome_base[:2])
+    os.makedirs(subpasta, exist_ok=True)
+    caminho_saida = os.path.join(subpasta, nome_arquivo)
+    df_filtrado.to_csv(caminho_saida, index=False, encoding='utf-8-sig', sep=';')
+
+print("Arquivos CSV salvos com sucesso.")
